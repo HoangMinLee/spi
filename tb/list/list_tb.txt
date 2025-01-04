@@ -1,0 +1,1 @@
+${DIR_TB}/tb_spi.sv
