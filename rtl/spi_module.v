@@ -18,7 +18,6 @@
 //												 |Add more explanation to
 //												 |code the lines.
 //=======================================================
-
 module spi_module (
 //input signal
     input i_sys_clk,
@@ -33,8 +32,10 @@ module spi_module (
     inout io_SCK,
     inout io_MOSI,
     inout io_MISO,
+    inout io_SS
+);
 
-//Internal signal and variables declaration
+  //Internal signal and variables declaration
   reg [7:0] R_SPI_CONTROL_1;
   reg [7:0] R_SPI_CONTROL_2;
   reg [7:0] R_SPI_STATUS;
@@ -74,16 +75,16 @@ module spi_module (
 
 
 
-
   //=====================================================
   //		SPI module configuration
   //=====================================================
+
   //Parameter declaration
   parameter IDLE = 2'b00;
   parameter MASTER = 2'b01;
   parameter SLAVE = 2'b10;
 
-  reg [1:0] STATUS; //store SPI status
+  reg [1:0] STATUS;
 
   always @(posedge i_sys_clk) begin
     if (!i_sys_rst) begin
@@ -132,7 +133,7 @@ module spi_module (
   //==========================================================
   //			 MASTER MODE
   // =========================================================
-  reg M_MOSI;
+  reg M_MOSI; //master output mosi
 
   always @(posedge i_sys_clk) begin
     if (!i_sys_rst) begin
@@ -148,12 +149,9 @@ module spi_module (
     end
   end
 
-
-
-
   assign io_SS = ((STATUS == MASTER) && (R_SPI_CONTROL_1[1])) ? M_SS : 1'bz;
 
-  //MASTER TRANS
+  
   always @(negedge io_SS) begin
     if (STATUS == MASTER) begin
       counter_i <= 4'b0;
@@ -189,7 +187,7 @@ module spi_module (
         end else begin
           R_SPI_DATA_SHIFT <= {io_MISO, R_SPI_DATA_SHIFT[7:1]};
         end
-        counter_i <= counter_i + 1;
+        counter_i <= counter_i + 1; 
         if (counter_i == 7) begin
           M_SS <= 1'b1;
           counter_i <= 0;
