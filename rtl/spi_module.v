@@ -20,22 +20,21 @@
 //=======================================================
 
 module spi_module (
+//input signal
     input i_sys_clk,
     input i_sys_rst,
     input [31:0] i_data_config,
     input i_trans_en,
     input [7:0] i_data,
+//output signal
     output [7:0] o_data,
     output o_interrupt,
+//inout signal
     inout io_SCK,
     inout io_MOSI,
     inout io_MISO,
-    inout io_SS
-);
 
-  //=====================================================================
-  // 		REGISTER CONFIG MASTER - SLAVE 
-  //=====================================================================
+//Internal signal and variables declaration
   reg [7:0] R_SPI_CONTROL_1;
   reg [7:0] R_SPI_CONTROL_2;
   reg [7:0] R_SPI_STATUS;
@@ -44,13 +43,15 @@ module spi_module (
   reg [7:0] R_SPI_DATA;
 
 
-  reg [3:0] counter_i;
-  //DIV FREQUENCE CLOCK WITH 
-  reg [11:0] R_counter_div;
-  reg M_SCK;
-  reg M_SS;
-  reg [11:0] cal;
+  reg [3:0] counter_i; //counting received data based on SCK negative edge
+  reg [11:0] R_counter_div; //counting to generate SCK 
+  reg M_SCK; //master ouput sck
+  reg M_SS; //master ouput ss
+  reg [11:0] cal; //caculate Baudrate Divisor minus by one
 
+  //=====================================================
+  //		SCK generator when spi is configured as master
+  //=====================================================	 
   always @(posedge i_sys_clk) begin
     cal <= (R_SPI_BAUD_RATE[6:4] + 1) * (2 ** R_SPI_BAUD_RATE[2:0]) - 1;
     if (!i_sys_rst) begin
@@ -74,14 +75,15 @@ module spi_module (
 
 
 
-  //=========================================================================
-  //		CONFIG MODE MASTER OR SLAVE FOR MODULE
-  //=========================================================================
+  //=====================================================
+  //		SPI module configuration
+  //=====================================================
+  //Parameter declaration
   parameter IDLE = 2'b00;
   parameter MASTER = 2'b01;
   parameter SLAVE = 2'b10;
 
-  reg [1:0] STATUS;
+  reg [1:0] STATUS; //store SPI status
 
   always @(posedge i_sys_clk) begin
     if (!i_sys_rst) begin
@@ -109,9 +111,9 @@ module spi_module (
 
 
 
-  //==========================================================
-  //	INTERUPT REQUEST IF CONFIG CHANGE AND INTERUPT EN
-  //==========================================================
+  //=========================================================================
+  //	Interrupt request if configuration data change and interrupt is enable
+  //=========================================================================
   always @(posedge i_sys_clk) begin
     if (STATUS != IDLE) begin
       if((R_SPI_CONTROL_1 != i_data_config[31:24]) || (R_SPI_CONTROL_2 != i_data_config[23:16]) || (R_SPI_BAUD_RATE != i_data_config[7:0])) begin
@@ -147,16 +149,7 @@ module spi_module (
   end
 
 
-  // DETECTED MODE - DON'T RUN
-  // always @(posedge SCK) begin
-  //     if((R_SPI_CONTROL_1[6])&&(STATUS == MASTER)) begin
-  //         if(R_SPI_CONTROL_2[4]&&(!R_SPI_CONTROL_1[1]))begin //check master detecting erro master
-  //             R_SPI_CONTROL_1[4] <= 1'b0;
-  //             STATUS <= SLAVE;
-  //             R_SPI_STATUS[4] <= 1'b1;
-  //         end
-  //     end
-  // end
+
 
   assign io_SS = ((STATUS == MASTER) && (R_SPI_CONTROL_1[1])) ? M_SS : 1'bz;
 
@@ -212,9 +205,9 @@ module spi_module (
   //==========================================================
   // 		SLAVE MODE
   //==========================================================
-  wire S_CLK;
+  wire S_CLK; //slave input sck
   assign S_CLK = io_SCK;
-  reg S_MISO;
+  reg S_MISO; //slave ouput sck 
 
   always @(negedge io_SS) begin
     if (STATUS == SLAVE) begin
